@@ -1,9 +1,12 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
-//import { register } from "../auth/authService";
+import { register } from "../auth/authService";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [birthday, setBirthday] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -13,14 +16,14 @@ export default function RegisterPage() {
     e.preventDefault(); 
     
     if (password !== confirmPassword) {
-      alert("Паролите не съвпадат!");
+      alert("Passwords don't match!");
       return;
     }
 
     try {
-      //const res = await register({ email, password });
-      
-      console.log("Registration successful!");
+      const res = await register({ email, name, username, birthday, password, confirmPassword });
+       
+      console.log("Registration successful with response:", res);
       
       navigate("/login"); 
     } catch (error) {
@@ -30,45 +33,77 @@ export default function RegisterPage() {
 
   return (
     <div style={styles.pageBackground}>
-      <div style={styles.loginCard}>
-        <h1 style={styles.title}>Register</h1>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
         
-        <form onSubmit={handleRegister} style={styles.form}>
-          <input 
-            type="email"
-            placeholder="Email" 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            style={styles.input}
-            required
-          />
+        <h2 style={styles.mainAppTitle}>✈ Trip Planner</h2>
+        
+        <div style={styles.loginCard}>
+          <h1 style={styles.title}>Register</h1>
           
-          <input 
-            type="password"
-            placeholder="Password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
-            required
-          />
+          <form onSubmit={handleRegister} style={styles.form}>
+            <input 
+              type="text"
+              placeholder="Full Name" 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              style={styles.input}
+              required
+            />
 
-          <input 
-            type="password"
-            placeholder="Confirm Password" 
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            style={styles.input}
-            required
-          />
-          
-          <button type="submit" style={styles.button}>Register</button>
-        </form>
+            <input 
+              type="text"
+              placeholder="Username" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              style={styles.input}
+              required
+            />
 
-        <div style={styles.footer}>
-          <span style={styles.footerText}>Already have an account? </span>
-          <Link to="/login" style={styles.link}>Log in here</Link>
+            <input 
+              type="email"
+              placeholder="Email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              style={styles.input}
+              required
+            />
+
+            <input 
+              type="date"
+              placeholder="Birthday" 
+              value={birthday} 
+              onChange={(e) => setBirthday(e.target.value)} 
+              style={styles.input}
+              required
+            />
+            
+            <input 
+              type="password"
+              placeholder="Password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={styles.input}
+              required
+            />
+
+            <input 
+              type="password"
+              placeholder="Confirm Password" 
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              style={styles.input}
+              required
+            />
+            
+            <button type="submit" style={styles.button}>Register</button>
+          </form>
+
+          <div style={styles.footer}>
+            <span style={styles.footerText}>Already have an account? </span>
+            <Link to="/login" style={styles.link}>Log in here</Link>
+          </div>
+
         </div>
-
       </div>
     </div>
   );
@@ -82,6 +117,15 @@ const styles = {
     justifyContent: "center",
     backgroundColor: "#a7993b66", 
     margin: "-8px", 
+    fontFamily: "sans-serif"
+  },
+  mainAppTitle: {
+    fontSize: "42px",
+    fontWeight: "bold",
+    color: "#7b0325",
+    marginBottom: "20px",
+    marginTop: "0px", 
+    textShadow: "1px 1px 2px rgba(0,0,0,0.1)",
     fontFamily: "sans-serif"
   },
   loginCard: {
@@ -109,7 +153,8 @@ const styles = {
     borderRadius: "4px",
     border: "1px solid #ccc",
     outline: "none",
-    color: "#333"
+    color: "#333",
+    fontFamily: "sans-serif" 
   },
   button: {
     padding: "14px",

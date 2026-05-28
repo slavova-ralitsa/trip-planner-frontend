@@ -19,11 +19,14 @@ export default function LoginPage() {
       navigate("/home"); 
     } catch (error) {
       console.error("Login error:", error);
+      alert("Login error: " + (error.response?.data?.message || error.message));
     }
   };
 
   return (
     <div style={styles.pageBackground}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <h2 style={styles.mainAppTitle}>✈ Trip Planner</h2>
       <div style={styles.loginCard}>
         <h1 style={styles.title}>Log in</h1>
         
@@ -56,6 +59,8 @@ export default function LoginPage() {
 
       </div>
     </div>
+  </div>
+
   );
 }
 
@@ -67,6 +72,15 @@ const styles = {
     justifyContent: "center",
     backgroundColor: "#a7993b66", 
     margin: "-8px", 
+    fontFamily: "sans-serif"
+  },
+  mainAppTitle: {
+    fontSize: "42px",
+    fontWeight: "bold",
+    color: "#7b0325",
+    marginBottom: "20px",
+    marginTop: "0px",
+    textShadow: "1px 1px 2px rgba(0,0,0,0.1)",
     fontFamily: "sans-serif"
   },
   loginCard: {
