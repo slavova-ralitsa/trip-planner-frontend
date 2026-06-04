@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import ErrorAlert from './ErrorAlert';
 
 const C = {
   bg:      "#a7993b66",
@@ -37,7 +38,8 @@ const s = {
   btnSm:     { padding:"7px 14px", fontSize:13, fontWeight:600, cursor:"pointer", backgroundColor:C.primary, color:C.white, border:"none", borderRadius:4 },
   btnGhost:  { padding:"7px 14px", fontSize:13, fontWeight:600, cursor:"pointer", backgroundColor:"#eee", color:C.text, border:"none", borderRadius:4 },
   btnDanger: { padding:"7px 14px", fontSize:13, fontWeight:600, cursor:"pointer", backgroundColor:C.dangerL, color:C.danger, border:"none", borderRadius:4 },
-  
+  iconBtn:   { background: "none", border: "none", fontSize: 35, cursor: "pointer",color:C.primary, padding: "0 8px",display: "flex",alignItems: "center",justifyContent: "center"},
+
   alertOk:  { backgroundColor:C.okL, color:C.okT, border:"1px solid #c3e6cb", borderRadius:4, padding:"9px 14px", fontSize:14, marginBottom:12 },
   alertErr: { backgroundColor:"#f8d7da", color:"#721c24", border:"1px solid #f5c6cb", borderRadius:4, padding:"9px 14px", fontSize:14, marginBottom:12 },
   
@@ -115,6 +117,7 @@ function loadLeaflet() {
 
 
 function RouteMap({ trip }) {
+
   const divRef   = useRef(null);
   const mapRef   = useRef(null);
   const layerRef = useRef(null);
@@ -134,14 +137,25 @@ function RouteMap({ trip }) {
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current || !window.L) return;
+    if (!mapRef.current || !layerRef.current || !window.L) 
+      return;
     const L     = window.L;
     const layer = layerRef.current;
     layer.clearLayers();
 
     if (!trip || !trip.tripDestinations?.length) return;
 
-    const stops = [...trip.tripDestinations].sort((a, b) => a.dayIndex - b.dayIndex);
+
+    const stops = [...trip.tripDestinations]
+    .sort((a, b) => a.dayIndex - b.dayIndex)
+    .filter(td =>
+      td.destination != null &&
+      td.destination.latitude  != null &&
+      td.destination.longitude != null
+    );
+
+    if (!stops.length) 
+      return;
     const coords = stops.map(td => [td.destination.latitude, td.destination.longitude]);
 
     if (coords.length > 1) {
@@ -162,13 +176,18 @@ function RouteMap({ trip }) {
       });
       L.marker([latitude, longitude], { icon })
         .addTo(layer)
-        .bindPopup(`<b>${td.dayIndex}. ${td.destination.name}</b><br><small>${td.destination.city}, ${td.destination.country}</small>`);    
-});
+        .bindPopup(
+          td?.destination
+            ? `<b>${td.dayIndex}. ${td.destination.name}</b><br><small>${td.destination.city}, ${td.destination.country}</small>`
+            : "Missing destination"
+        );});
 
-    try { 
-      mapRef.current.fitBounds(layer.getBounds().pad(0.3)); 
-    } 
-    catch(_) {}
+        try {
+          const bounds = layer.getBounds();
+          if (bounds.isValid()) {
+            mapRef.current.fitBounds(bounds.pad(0.3));
+          }
+        } catch(_) {}
   }, [trip]);
 
   return (
@@ -360,17 +379,18 @@ function TripForm({ allDestinations, onCreated }) {
 }
 
 
-function TripCard({ trip, isActive, onSelect, onDelete, onEdit }) {
+function TripCard({ trip, isActive, onSelect, onDelete, onEdit, onToggleFavorite }) {
   const stops = trip.tripDestinations
     ? [...trip.tripDestinations].sort((a,b) => a.dayIndex - b.dayIndex)
     : [];
 
   return (
     <div
-      style={{ ...s.tripCard, ...(isActive ? s.tripCardActive : {}) }}
+      style={{ ...s.tripCard, position: "relative", ...(isActive ? s.tripCardActive : {}) }}
       onClick={onSelect}
     >
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+        
         <div>
           <p style={s.tripName}>{trip.name}</p>
           <p style={s.tripMeta}>
@@ -379,36 +399,55 @@ function TripCard({ trip, isActive, onSelect, onDelete, onEdit }) {
           </p>
         </div>
         
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <button
-            style={s.btnDanger}
-            onClick={e => { e.stopPropagation(); onDelete(trip); }}
-            title="Delete trip"
-          >🗑 Delete</button>
-          
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-end" }}>
           <button
             style={{ ...s.btnGhost, color: C.primary, border: `1px solid ${C.primary}` }}
             onClick={e => { e.stopPropagation(); onEdit(trip); }}
             title="Edit trip"
           >✏️ Edit</button>
+
+          <button
+            style={s.btnDanger}
+            onClick={e => { e.stopPropagation(); onDelete(trip); }}
+            title="Delete trip"
+          >🗑 Delete</button>
         </div>
       </div>
 
       {stops.length > 0 && (
-        <>
+        <div style={{ paddingRight: 32 }}>
           <div style={s.routeStops}>
             {stops.map(td => (
-              <span key={td.dayIndex} style={s.stopBadge}> {/* <-- Използваме dayIndex вместо id */}
+              <span key={td.dayIndex} style={s.stopBadge}>
                 <span style={s.stopNum}>{td.dayIndex}</span>
                 {td.destination.name} ({td.destination.city})
               </span>
             ))}
           </div>
           {stops.length > 1 && (
-            <span style={s.routeLabel}> Optimal route · {stops.length} places</span>
+            <span style={s.routeLabel}> Optimal route · {stops.length} cities</span>
           )}
-        </>
+        </div>
       )}
+
+      <button
+        style={{ 
+          position: "absolute",
+          bottom: 14, 
+          right: 14, 
+          background: "none", 
+          border: "none", 
+          cursor: "pointer", 
+          fontSize: 26, 
+          color: C.primary, 
+          padding: 0, 
+          lineHeight: 1
+        }}
+        onClick={e => { e.stopPropagation(); onToggleFavorite(trip); }}
+        title={trip.isFavorite ? "Remove from favorites" : "Add to favorites"}
+      >
+        {trip.isFavorite ? "★" : "☆"}
+      </button>
     </div>
   );
 }
@@ -423,9 +462,13 @@ function EditTripModal({ trip, allDestinations, onSave, onClose }) {
     : [];
   const [dests, setDests] = useState(initialDests);
   const [busy, setBusy] = useState(false);
+  
+  // Добавяме локален стейт за грешки вътре в модала
+  const [localError, setLocalError] = useState(null);
 
   const submit = async () => {
     setBusy(true);
+    setLocalError(null);
     try {
       const updatedTrip = await api("PUT", `/api/trips/${trip.id}`, {
         name,
@@ -435,7 +478,14 @@ function EditTripModal({ trip, allDestinations, onSave, onClose }) {
       });
       onSave(updatedTrip);
     } catch(err) {
-      alert("Error updating trip: " + err.message);
+      // Заменяме alert-а с красивия ни ErrorAlert статус
+      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+        setLocalError(503);
+      } else if (err.message.includes("401")) {
+        setLocalError(401);
+      } else {
+        setLocalError(500);
+      }
     } finally {
       setBusy(false);
     }
@@ -445,6 +495,15 @@ function EditTripModal({ trip, allDestinations, onSave, onClose }) {
     <div style={s.overlay} onClick={onClose}>
       <div style={{ ...s.modal, maxWidth: 450 }} onClick={e => e.stopPropagation()}>
         <p style={s.modalTitle}>Edit Trip</p>
+        
+        {/* Ако има локална грешка, я рендерираме тук */}
+        {localError && (
+          <ErrorAlert 
+            statusCode={localError} 
+            onClose={() => setLocalError(null)} 
+          />
+        )}
+
         <div style={s.form}>
           <div style={s.fieldWrap}>
             <span style={s.label}>Trip Name</span>
@@ -500,6 +559,8 @@ function DeleteModal({ tripName, onConfirm, onClose }) {
   );
 }
 
+
+
 export default function HomePage() {
   const [allDestinations, setAllDestinations] = useState([]);
   const [trips,           setTrips]           = useState([]);
@@ -509,9 +570,37 @@ export default function HomePage() {
   const [showCreateTrip,  setShowCreateTrip]  = useState(false);  
   const [loading,         setLoading]         = useState(true);
   const [loadErr,         setLoadErr]         = useState(null);
+  const [errorStatus, setErrorStatus] = useState(null);
+
+  const [viewMode, setViewMode] = useState(() => {
+    return window.location.hash.replace("#", "") || "all";
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const currentMode = window.location.hash.replace("#", "") || "all";
+      setViewMode(currentMode);
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  const navigateTo = (mode) => {
+    window.location.hash = mode === "all" ? "" : mode;
+  };
 
   const handleUpdate = (updatedTrip) => {
-    setTrips(ts => ts.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    setTrips(ts => ts.map(t => {
+      if (t.id === updatedTrip.id) {
+        return { 
+          ...updatedTrip, 
+          isFavorite: t.isFavorite 
+        };
+      }
+      return t;
+    }));
+  
     if (activeTripId === updatedTrip.id) setActiveTripId(updatedTrip.id);
     setEditTarget(null);
   };
@@ -519,13 +608,28 @@ export default function HomePage() {
   useEffect(() => {
     (async () => {
       try {
-        const [dests, trips] = await Promise.all([
-          api("GET", "/api/destinations"),       
-          api("GET", "/api/trips"),              
-        ]);
+        const token = localStorage.getItem("token");
+        const payload = token
+          ? JSON.parse(window.atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+          : {};
+        const userId = payload.userId || payload.id || payload.sub;
+
+        const requests = [
+          api("GET", "/api/destinations"),
+          api("GET", "/api/trips"),
+          userId ? api("GET", `/api/users/${userId}/favourites`) : Promise.resolve([]),
+        ];
+        const [dests, tripsData, favTrips] = await Promise.all(requests);
+
+        const favIds = new Set((Array.isArray(favTrips) ? favTrips : []).map(t => t.id));
+        const tripsWithFav = (Array.isArray(tripsData) ? tripsData : []).map(t => ({
+          ...t,
+          isFavorite: favIds.has(t.id),
+        }));
+
         setAllDestinations(Array.isArray(dests) ? dests : []);
-        setTrips(Array.isArray(trips) ? trips : []);
-        if (trips?.length) setActiveTripId(trips[0].id);
+        setTrips(tripsWithFav);
+        if (tripsWithFav?.length) setActiveTripId(tripsWithFav[0].id);
       } catch(e) {
         setLoadErr(e.message);
       } finally {
@@ -546,7 +650,14 @@ export default function HomePage() {
       setTrips(ts => ts.filter(t => t.id !== deleteTarget.id));
       if (activeTripId === deleteTarget.id) setActiveTripId(null);
     } catch(e) {
-      alert("Could not delete trip: " + e.message);
+      setErrorStatus(null); 
+      if (e.message === "Failed to fetch" || e.name === "TypeError") {
+        setErrorStatus(503);
+      } else if (e.message.includes("401")) {
+        setErrorStatus(401);
+      } else {
+        setErrorStatus(500);
+      }
     }
     setDeleteTarget(null);
   };
@@ -560,60 +671,130 @@ export default function HomePage() {
       console.error("Failed to load trip details", e);
     }
   };
-  
-  const activeTrip = trips.find(t => t.id === activeTripId) ?? null;
 
+  const handleToggleFavorite = async (trip) => {
+    const newStatus = !trip.isFavorite;
+    setTrips(ts => ts.map(t => t.id === trip.id ? { ...t, isFavorite: newStatus } : t));
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No authorization token found.");
+
+      const payload = JSON.parse(window.atob(
+        token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+      ));
+      const userId = payload.userId || payload.id || payload.sub;
+      if (!userId) throw new Error("User ID is not present in the token payload.");
+
+      if (newStatus) {
+        await api("POST", `/api/users/${userId}/favourites/${trip.id}`);
+      } else {
+        await api("DELETE", `/api/users/${userId}/favourites/${trip.id}`);
+      }
+    } catch (err) {
+      setTrips(ts => ts.map(t => t.id === trip.id ? { ...t, isFavorite: !newStatus } : t));
+      setErrorStatus(null);
+      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+        setErrorStatus(503);
+      } else if (err.message.includes("401")) {
+        setErrorStatus(401);
+      } else {
+        setErrorStatus(500);
+      }
+    }
+  };
+  
+
+  const displayedTrips = viewMode === "favorites"
+    ? trips.filter(t => t.isFavorite)
+    : trips.filter(t => !t.isFavorite).slice(0, 5);
+
+    const activeTrip = displayedTrips.find(t => t.id === activeTripId) ?? null;
   return (
     <div style={s.page}>
       <div style={s.wrap}>
 
         <div style={s.topBar}>
-          <h1 style={s.title}>✈ Trip Planner</h1>
-          <button style={s.logoutBtn} onClick={() => {
-            localStorage.removeItem("token");
-            window.location.href = "/login";
-          }}>Log Out</button>
+          <h1 
+            style={{ ...s.title, cursor: "pointer" }} 
+            onClick={() => navigateTo("all")}
+            title="Go to Recent Searches"
+          >
+            ✈ Trip Planner
+          </h1>
+          
+          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+          <button 
+            style={{ ...s.iconBtn, opacity: 1 }} 
+            onClick={() => navigateTo(viewMode === "favorites" ? "all" : "favorites")}
+            title={viewMode === "favorites" ? "" : "Favourites"} 
+          >
+            {viewMode === "favorites" ? "★" : "☆"}
+          </button>
+          
+            
+            <span style={{ color: C.border }}>|</span>
+
+            <button style={s.logoutBtn} onClick={() => {
+              localStorage.removeItem("token");
+              window.location.href = "/login";
+            }}>Log Out</button>
+          </div>
         </div>
 
         {loadErr && <div style={{ ...s.alertErr, marginBottom:20 }}>{loadErr}</div>}
 
-        <div style={s.layout}>
+        {errorStatus && (
+          <ErrorAlert 
+            statusCode={errorStatus} 
+            onClose={() => setErrorStatus(null)} 
+          />
+        )}
 
-          <div>
-            {/* Тук вече я няма старата форма, само списъкът с пътувания */}
-            <div style={s.card}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: trips.length ? 14 : 0 }}>
+        <div style={s.layout}>
+        <div>
+        <div style={s.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: displayedTrips.length ? 14 : 0 }}>
+                
                 <h2 style={{ ...s.cardTitle, margin: 0 }}>
-                  🧳 Searched Trips
-                  {trips.length > 0 && (
+                  {viewMode === "favorites" ? "Favourite Trips" : "Recent searches"}
+                  
+                  {displayedTrips.length > 0 && (
                     <span style={{ fontSize:14, fontWeight:400, color:C.muted, marginLeft:10 }}>
-                      {trips.length} trip{trips.length !== 1 ? "s" : ""}
+                      {displayedTrips.length} trip{displayedTrips.length !== 1 ? "s" : ""}
                     </span>
                   )}
                 </h2>
                 
-                {/* Бутонът, който отваря модала за ново пътуване */}
-                <button 
-                  style={s.btnSm} 
-                  onClick={() => setShowCreateTrip(true)}
-                  disabled={loading}
-                >
-                  + Add Trip
-                </button>
+                {viewMode === "all" && (
+                  <button 
+                    style={s.btnSm} 
+                    onClick={() => setShowCreateTrip(true)}
+                    disabled={loading}
+                  >
+                    + Add Trip
+                  </button>
+                )}
               </div>
 
               {loading && <div style={s.empty}>Loading trips…</div>}
 
-              {!loading && trips.length === 0 && (
+              {!loading && displayedTrips.length === 0 && (
                 <div style={s.empty}>
-                  <div style={s.emptyIcon}>🗺</div>
-                  <div>No trips yet — create your first adventure!</div>
+                  <div style={s.emptyIcon}>
+                    {viewMode === "favorites" ? "★" : "🗺"}
+                  </div>
+                  <div>
+                    {viewMode === "favorites" 
+                      ? "You don't have any favorite trips yet."
+                      : "No recent searches yet — create your first adventure!"}
+                  </div>
                 </div>
               )}
 
-              {!loading && trips.length > 0 && (
+              {!loading && displayedTrips.length > 0 && (
                 <div style={s.tripList}>
-                  {trips.map(trip => (
+                  {displayedTrips.map(trip => (
                     <TripCard
                       key={trip.id}
                       trip={trip}
@@ -621,6 +802,7 @@ export default function HomePage() {
                       onSelect={() => handleSelectTrip(trip.id)}
                       onDelete={setDeleteTarget}
                       onEdit={setEditTarget} 
+                      onToggleFavorite={handleToggleFavorite} 
                     />
                   ))}
                 </div>
@@ -630,9 +812,9 @@ export default function HomePage() {
 
           <RouteMap trip={activeTrip} />
         </div>
+        
       </div>
 
-      {/* Модал за създаване на ново пътуване */}
       {showCreateTrip && (
         <CreateTripModal
           allDestinations={allDestinations}
@@ -641,7 +823,6 @@ export default function HomePage() {
         />
       )}
 
-      {/* Съществуващи модали */}
       {deleteTarget && (
         <DeleteModal
           tripName={deleteTarget.name}
