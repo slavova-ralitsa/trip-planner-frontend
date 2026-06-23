@@ -1,6 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { login } from "../auth/authService";
+import axios from "axios"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,10 +13,18 @@ export default function LoginPage() {
     e.preventDefault(); 
     try {
       const res = await login({ email, password });
-      
-      localStorage.setItem("token", res.data.token);
-      console.log("Login successful!");
-      
+      const token = res.data.token;
+      localStorage.setItem("token", token);
+  
+      const payload = JSON.parse(
+        window.atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+      );
+  
+      const profileRes = await axios.get(`http://localhost:8087/api/users/${payload.userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      localStorage.setItem("userName", profileRes.data.name || profileRes.data.username || "Traveller");
+  
       navigate("/home"); 
     } catch (error) {
       console.error("Login error:", error);

@@ -117,77 +117,91 @@ function loadLeaflet() {
 
 
 function RouteMap({ trip }) {
-
   const divRef   = useRef(null);
   const mapRef   = useRef(null);
   const layerRef = useRef(null);
 
   useEffect(() => {
     let dead = false;
-    loadLeaflet().then(L => {
-      if (dead || mapRef.current) return;
-      const map = L.map(divRef.current, { zoomControl:true }).setView([48, 15], 4);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:"© <a href='https://openstreetmap.org'>OpenStreetMap</a>",
-      }).addTo(map);
-      layerRef.current = L.featureGroup().addTo(map);
-      mapRef.current = map;
-    });
-    return () => { dead = true; };
+    const timer = setTimeout(() => {
+      loadLeaflet().then(L => {
+        if (dead || mapRef.current) return;
+        const map = L.map(divRef.current, { zoomControl: true }).setView([48, 15], 4);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© <a href='https://openstreetmap.org'>OpenStreetMap</a>",
+        }).addTo(map);
+        layerRef.current = L.featureGroup().addTo(map);
+        mapRef.current = map;
+        mapRef.current._isReady = true;
+      });
+    }, 500);
+
+    return () => { dead = true; clearTimeout(timer); };
   }, []);
 
   useEffect(() => {
-    if (!mapRef.current || !layerRef.current || !window.L) 
-      return;
-    const L     = window.L;
-    const layer = layerRef.current;
-    layer.clearLayers();
+    const renderTrip = () => {
+      if (!mapRef.current || !layerRef.current || !window.L) return;
 
-    if (!trip || !trip.tripDestinations?.length) return;
+      const L = window.L;
+      const layer = layerRef.current;
+      layer.clearLayers();
 
+      setTimeout(() => mapRef.current?.invalidateSize(), 100);
 
-    const stops = [...trip.tripDestinations]
-    .sort((a, b) => a.dayIndex - b.dayIndex)
-    .filter(td =>
-      td.destination != null &&
-      td.destination.latitude  != null &&
-      td.destination.longitude != null
-    );
+      if (!trip || !trip.tripDestinations?.length) return;
 
-    if (!stops.length) 
-      return;
-    const coords = stops.map(td => [td.destination.latitude, td.destination.longitude]);
+      const stops = [...trip.tripDestinations]
+        .sort((a, b) => a.dayIndex - b.dayIndex)
+        .filter(td =>
+          td?.destination != null &&
+          typeof td.destination.latitude === "number" &&
+          typeof td.destination.longitude === "number" &&
+          isFinite(td.destination.latitude) &&
+          isFinite(td.destination.longitude)
+        );
 
-    if (coords.length > 1) {
-      L.polyline(coords, { color:C.primary, weight:3, opacity:.8, dashArray:"7 6" }).addTo(layer);
-    }
+      if (!stops.length) return;
 
-    stops.forEach((td) => {
-      const { latitude, longitude, city, country } = td.destination;
-      const icon = L.divIcon({
-        className:"",
-        html:`<div style="
-          background:${C.primary};color:#fff;
-          width:28px;height:28px;border-radius:50%;
-          display:flex;align-items:center;justify-content:center;
-          font-size:13px;font-weight:700;font-family:sans-serif;
-          border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);">${td.dayIndex}</div>`,
-        iconSize:[28,28], iconAnchor:[14,14],
-      });
-      L.marker([latitude, longitude], { icon })
-        .addTo(layer)
-        .bindPopup(
-          td?.destination
-            ? `<b>${td.dayIndex}. ${td.destination.name}</b><br><small>${td.destination.city}, ${td.destination.country}</small>`
-            : "Missing destination"
-        );});
+      const coords = stops.map(td => [td.destination.latitude, td.destination.longitude]);
 
+      if (coords.length > 1) {
         try {
-          const bounds = layer.getBounds();
-          if (bounds.isValid()) {
-            mapRef.current.fitBounds(bounds.pad(0.3));
-          }
+          L.polyline(coords, { color: C.primary, weight: 3, opacity: .8, dashArray: "7 6" }).addTo(layer);
         } catch(_) {}
+      }
+
+      stops.forEach(td => {
+        const { latitude, longitude } = td.destination;
+        const icon = L.divIcon({
+          className: "",
+          html: `<div style="background:${C.primary};color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:sans-serif;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);">${td.dayIndex}</div>`,
+          iconSize: [28, 28], iconAnchor: [14, 14],
+        });
+        try {
+          L.marker([latitude, longitude], { icon })
+            .addTo(layer)
+            .bindPopup(`<b>${td.dayIndex}. ${td.destination.name}</b><br><small>${td.destination.city}, ${td.destination.country}</small>`);
+        } catch(_) {}
+      });
+
+      try {
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) mapRef.current.fitBounds(bounds.pad(0.3));
+      } catch(_) {}
+    };
+
+    if (mapRef.current?._isReady) {
+      renderTrip();
+    } else {
+      const interval = setInterval(() => {
+        if (mapRef.current?._isReady) {
+          clearInterval(interval);
+          renderTrip();
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
   }, [trip]);
 
   return (
@@ -234,11 +248,22 @@ function DestinationPicker({ allDestinations, selected, onChange }) {
       (`${d.city} ${d.country} ${d.name}`).toLowerCase().includes(query.toLowerCase())
     ).slice(0, 8);
 
-  useEffect(() => {
-    const handler = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+    useEffect(() => {
+      let dead = false;
+      const timer = setTimeout(() => {
+        loadLeaflet().then(L => {
+          if (dead || mapRef.current) return;
+          const map = L.map(divRef.current, { zoomControl:true }).setView([48, 15], 4);
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution:"© <a href='https://openstreetmap.org'>OpenStreetMap</a>",
+          }).addTo(map);
+          layerRef.current = L.featureGroup().addTo(map);
+          mapRef.current = map;
+        });
+      }, 300); 
+    
+      return () => { dead = true; clearTimeout(timer); };
+    }, []);
 
   const pick = dest => {
     onChange([...selected, dest]);
