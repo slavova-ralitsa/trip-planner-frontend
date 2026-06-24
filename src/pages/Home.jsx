@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import ErrorAlert from './ErrorAlert';
+import { useAuth } from "../auth/useAuth";
+
 
 const C = {
   bg:      "#a7993b66",
@@ -247,23 +249,6 @@ function DestinationPicker({ allDestinations, selected, onChange }) {
       !selected.find(s => s.id === d.id) &&
       (`${d.city} ${d.country} ${d.name}`).toLowerCase().includes(query.toLowerCase())
     ).slice(0, 8);
-
-    useEffect(() => {
-      let dead = false;
-      const timer = setTimeout(() => {
-        loadLeaflet().then(L => {
-          if (dead || mapRef.current) return;
-          const map = L.map(divRef.current, { zoomControl:true }).setView([48, 15], 4);
-          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution:"© <a href='https://openstreetmap.org'>OpenStreetMap</a>",
-          }).addTo(map);
-          layerRef.current = L.featureGroup().addTo(map);
-          mapRef.current = map;
-        });
-      }, 300); 
-    
-      return () => { dead = true; clearTimeout(timer); };
-    }, []);
 
   const pick = dest => {
     onChange([...selected, dest]);
@@ -596,6 +581,8 @@ export default function HomePage() {
   const [loading,         setLoading]         = useState(true);
   const [loadErr,         setLoadErr]         = useState(null);
   const [errorStatus, setErrorStatus] = useState(null);
+  const { logout, getUserId } = useAuth();
+
 
   const [viewMode, setViewMode] = useState(() => {
     return window.location.hash.replace("#", "") || "all";
@@ -633,11 +620,7 @@ export default function HomePage() {
   useEffect(() => {
     (async () => {
       try {
-        const token = localStorage.getItem("token");
-        const payload = token
-          ? JSON.parse(window.atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-          : {};
-        const userId = payload.userId || payload.id || payload.sub;
+        const userId = getUserId();
 
         const requests = [
           api("GET", "/api/destinations"),
@@ -760,10 +743,8 @@ export default function HomePage() {
             
             <span style={{ color: C.border }}>|</span>
 
-            <button style={s.logoutBtn} onClick={() => {
-              localStorage.removeItem("token");
-              window.location.href = "/login";
-            }}>Log Out</button>
+            <button style={s.logoutBtn} onClick={logout}
+            >Log Out</button>
           </div>
         </div>
 
