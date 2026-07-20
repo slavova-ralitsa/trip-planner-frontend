@@ -1,6 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { register } from "../auth/authService";
+import ErrorAlert from "../components/ErrorAlert"; 
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -9,92 +10,102 @@ export default function RegisterPage() {
   const [birthday, setBirthday] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [registerError, setRegisterError] = useState(null); 
 
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
-    e.preventDefault(); 
-    
+    e.preventDefault();
+
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      setRegisterError("mismatch");
       return;
     }
 
     try {
       const res = await register({ email, name, username, birthday, password, confirmPassword });
-       
       console.log("Registration successful with response:", res);
-      
-      navigate("/login"); 
+      navigate("/login");
     } catch (error) {
       console.error("Registration error:", error);
+      setRegisterError(error.response?.status || 500);
     }
   };
 
   return (
     <div style={styles.pageBackground}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        
         <h2 style={styles.mainAppTitle}>✈ Trip Planner</h2>
-        
+
         <div style={styles.loginCard}>
           <h1 style={styles.title}>Register</h1>
-          
+
+          {registerError && (
+            <ErrorAlert
+              statusCode={registerError}
+              onClose={() => setRegisterError(null)}
+              onAction={() => {
+                setRegisterError(null);
+                navigate("/login");
+              }}
+            />
+          )}
+
           <form onSubmit={handleRegister} style={styles.form}>
-            <input 
+            <input
               type="text"
-              placeholder="Full Name" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               style={styles.input}
               required
             />
 
-            <input 
+            <input
               type="text"
-              placeholder="Username" 
-              value={username} 
-              onChange={(e) => setUsername(e.target.value)} 
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               style={styles.input}
               required
             />
 
-            <input 
+            <input
               type="email"
-              placeholder="Email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               style={styles.input}
               required
             />
 
-            <input 
+            <input
               type="date"
-              placeholder="Birthday" 
-              value={birthday} 
-              onChange={(e) => setBirthday(e.target.value)} 
+              placeholder="Birthday"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
               style={styles.input}
               required
             />
-            
-            <input 
+
+            <input
               type="password"
-              placeholder="Password" 
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={styles.input}
               required
             />
 
-            <input 
+            <input
               type="password"
-              placeholder="Confirm Password" 
+              placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               style={styles.input}
               required
             />
-            
+
             <button type="submit" style={styles.button}>Register</button>
           </form>
 
@@ -102,7 +113,6 @@ export default function RegisterPage() {
             <span style={styles.footerText}>Already have an account? </span>
             <Link to="/login" style={styles.link}>Log in here</Link>
           </div>
-
         </div>
       </div>
     </div>
@@ -115,8 +125,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#a7993b66", 
-    margin: "-8px", 
+    backgroundColor: "#a7993b66",
+    margin: "-8px",
     fontFamily: "sans-serif"
   },
   mainAppTitle: {
@@ -124,7 +134,7 @@ const styles = {
     fontWeight: "bold",
     color: "#7b0325",
     marginBottom: "20px",
-    marginTop: "0px", 
+    marginTop: "0px",
     textShadow: "1px 1px 2px rgba(0,0,0,0.1)",
     fontFamily: "sans-serif"
   },
@@ -154,13 +164,13 @@ const styles = {
     border: "1px solid #ccc",
     outline: "none",
     color: "#333",
-    fontFamily: "sans-serif" 
+    fontFamily: "sans-serif"
   },
   button: {
     padding: "14px",
     fontSize: "18px",
     fontWeight: "600",
-    backgroundColor: "#7b0325", 
+    backgroundColor: "#7b0325",
     color: "#ffffff",
     border: "none",
     borderRadius: "4px",
@@ -177,7 +187,7 @@ const styles = {
     fontSize: "15px"
   },
   link: {
-    color: "#7b0325", 
+    color: "#7b0325",
     fontSize: "15px",
     textDecoration: "none",
     fontWeight: "600"

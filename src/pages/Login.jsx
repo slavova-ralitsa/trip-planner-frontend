@@ -1,12 +1,15 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../auth/useAuth";
+import ErrorAlert from "../components/ErrorAlert"; 
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState(null); 
   const { login } = useAuth();
   const navigate = useNavigate();
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -14,7 +17,8 @@ export default function LoginPage() {
       await login({ email, password });
       navigate("/home");
     } catch (error) {
-      alert("Login error: " + (error.response?.data?.message || error.message));
+      const status = error.response?.status;
+      setLoginError(status === 401 ? "login-401" : (status || 500));
     }
   };
 
@@ -24,6 +28,14 @@ export default function LoginPage() {
         <h2 style={styles.mainAppTitle}>✈ Trip Planner</h2>
         <div style={styles.loginCard}>
           <h1 style={styles.title}>Log in</h1>
+
+          {loginError && (
+            <ErrorAlert
+              statusCode={loginError}
+              onClose={() => setLoginError(null)}
+            />
+          )}
+
           <form onSubmit={handleLogin} style={styles.form}>
             <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input} required />
             <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input} required />

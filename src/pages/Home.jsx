@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import ErrorAlert from './ErrorAlert';
+import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from "../auth/useAuth";
 
 
@@ -312,7 +312,8 @@ function TripForm({ allDestinations, onCreated }) {
   const [end,    setEnd]    = useState("");
   const [dests,  setDests]  = useState([]);   
   const [errs,   setErrs]   = useState({});
-  const [msg,    setMsg]    = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+  const [errorStatus, setErrorStatus] = useState(null);
   const [busy,   setBusy]   = useState(false);
 
   const validate = () => {
@@ -328,7 +329,7 @@ function TripForm({ allDestinations, onCreated }) {
   const submit = async () => {
     const e = validate();
     if (Object.keys(e).length) return setErrs(e);
-    setBusy(true); setMsg(null);
+    setBusy(true); setSuccessMsg(null); setErrorStatus(null);
     try {
       const trip = await api("POST", "/api/trips", {
         name,
@@ -336,11 +337,17 @@ function TripForm({ allDestinations, onCreated }) {
         endDate:        end,
         destinationIds: dests.map(d => d.id)
       });
-      setMsg({ ok:true, text:"Trip created! Route optimised ✓" });
+      setSuccessMsg("Trip created! Route optimised ✓");
       setName(""); setStart(""); setEnd(""); setDests([]); setErrs({});
-      setTimeout(() => { setMsg(null); onCreated(trip); }, 1200);
+      setTimeout(() => { setSuccessMsg(null); onCreated(trip); }, 1200);
     } catch(err) {
-      setMsg({ ok:false, text: err.message });
+      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+        setErrorStatus(503);
+      } else if (err.message.includes("401")) {
+        setErrorStatus(401);
+      } else {
+        setErrorStatus(500);
+      }
     } finally { setBusy(false); }
   };
 
@@ -358,7 +365,10 @@ function TripForm({ allDestinations, onCreated }) {
 
   return (
     <>
-      {msg && <div style={msg.ok ? s.alertOk : s.alertErr}>{msg.text}</div>}
+      {successMsg && <div style={s.alertOk}>{successMsg}</div>}
+      {errorStatus && (
+        <ErrorAlert statusCode={errorStatus} onClose={() => setErrorStatus(null)} />
+      )}
       <div style={s.form}>
         {field("Trip Name", name, setName, "text", "name")}
         <div style={s.row2}>
@@ -579,7 +589,6 @@ export default function HomePage() {
   const [editTarget,      setEditTarget]      = useState(null); 
   const [showCreateTrip,  setShowCreateTrip]  = useState(false);  
   const [loading,         setLoading]         = useState(true);
-  const [loadErr,         setLoadErr]         = useState(null);
   const [errorStatus, setErrorStatus] = useState(null);
   const { logout, getUserId } = useAuth();
 
@@ -639,7 +648,13 @@ export default function HomePage() {
         setTrips(tripsWithFav);
         if (tripsWithFav?.length) setActiveTripId(tripsWithFav[0].id);
       } catch(e) {
-        setLoadErr(e.message);
+        if (e.message === "Failed to fetch" || e.name === "TypeError") {
+          setErrorStatus(503);
+        } else if (e.message.includes("401")) {
+          setErrorStatus(401);
+        } else {
+          setErrorStatus(500);
+        }
       } finally {
         setLoading(false);
       }
@@ -677,6 +692,13 @@ export default function HomePage() {
       setTrips(ts => ts.map(t => t.id === tripId ? fullTrip : t));
     } catch(e) {
       console.error("Failed to load trip details", e);
+      if (e.message === "Failed to fetch" || e.name === "TypeError") {
+        setErrorStatus(503);
+      } else if (e.message.includes("401")) {
+        setErrorStatus(401);
+      } else {
+        setErrorStatus(500);
+      }
     }
   };
 
@@ -747,8 +769,6 @@ export default function HomePage() {
             >Log Out</button>
           </div>
         </div>
-
-        {loadErr && <div style={{ ...s.alertErr, marginBottom:20 }}>{loadErr}</div>}
 
         {errorStatus && (
           <ErrorAlert 
