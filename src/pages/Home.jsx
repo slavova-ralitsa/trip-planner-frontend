@@ -170,7 +170,9 @@ function RouteMap({ trip }) {
       if (coords.length > 1) {
         try {
           L.polyline(coords, { color: C.primary, weight: 3, opacity: .8, dashArray: "7 6" }).addTo(layer);
-        } catch() {}
+        } catch (e) {
+          // ignored
+      }
       }
 
       stops.forEach(td => {
@@ -736,8 +738,7 @@ export default function HomePage() {
     ? trips.filter(t => t.isFavorite)
     : trips.filter(t => !t.isFavorite).slice(0, 5);
 
-    const activeTrip = displayedTrips.find(t => t.id === activeTripId) ?? null;
-  return (
+    const activeTrip = trips.find(t => t.id === activeTripId) ?? null;  return (
     <div style={s.page}>
       <div style={s.wrap}>
 
