@@ -84,11 +84,10 @@ const s = {
   modalActions: { display:"flex", gap:10 },
 };
 
-const BASE = "/api";
 const tk   = () => localStorage.getItem("token") || "";
 const hdr  = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${tk()}` });
 const api  = async (method, path, body) => {
-  const res = await fetch(BASE + path, {
+  const res = await fetch(path, {
     method,
     headers: hdr(),
     body: body ? JSON.stringify(body) : undefined,
