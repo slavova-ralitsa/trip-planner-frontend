@@ -483,7 +483,6 @@ function EditTripModal({ trip, allDestinations, onSave, onClose }) {
   const [dests, setDests] = useState(initialDests);
   const [busy, setBusy] = useState(false);
   
-  // Добавяме локален стейт за грешки вътре в модала
   const [localError, setLocalError] = useState(null);
 
   const submit = async () => {
@@ -498,7 +497,6 @@ function EditTripModal({ trip, allDestinations, onSave, onClose }) {
       });
       onSave(updatedTrip);
     } catch(err) {
-      // Заменяме alert-а с красивия ни ErrorAlert статус
       if (err.message === "Failed to fetch" || err.name === "TypeError") {
         setLocalError(503);
       } else if (err.message.includes("401")) {
@@ -516,7 +514,6 @@ function EditTripModal({ trip, allDestinations, onSave, onClose }) {
       <div style={{ ...s.modal, maxWidth: 450 }} onClick={e => e.stopPropagation()}>
         <p style={s.modalTitle}>Edit Trip</p>
         
-        {/* Ако има локална грешка, я рендерираме тук */}
         {localError && (
           <ErrorAlert 
             statusCode={localError} 

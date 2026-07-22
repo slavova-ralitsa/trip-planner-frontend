@@ -37,7 +37,7 @@ function ErrorAlert({ statusCode, onAction, onClose }) {
           {errorInfo.type === 'auth' ? '🔒' : errorInfo.type === 'warning' ? '⚠️' : '❌'}
         </span>
         <h4 style={{ margin: 0, color: currentStyle.text, fontWeight: "700", fontSize: "16px" }}>
-          {errorInfo.title} <span style={{ fontSize: "12px", opacity: 0.6 }}>(Отказ {statusCode})</span>
+          {errorInfo.title} <span style={{ fontSize: "12px", opacity: 0.6 }}></span>
         </h4>
       </div>
 
