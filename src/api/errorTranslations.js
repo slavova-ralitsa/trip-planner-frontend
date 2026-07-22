@@ -7,7 +7,7 @@ export const getFriendlyError = (statusCode, backendMessage) => {
     },
     400: {
       title: "Invalid Input",
-      message: backendMessage || "Please check your information and try again.",
+      message: (backendMessage ? backendMessage.replace(/^password:\s*/i, "") : null) || "Please check your information and try again.",
       type: "warning"
     },
     401: {
