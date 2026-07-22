@@ -84,7 +84,7 @@ const s = {
   modalActions: { display:"flex", gap:10 },
 };
 
-const BASE = "http://localhost:8087";   
+const BASE = "/api";
 const tk   = () => localStorage.getItem("token") || "";
 const hdr  = () => ({ "Content-Type":"application/json", Authorization:`Bearer ${tk()}` });
 const api  = async (method, path, body) => {
