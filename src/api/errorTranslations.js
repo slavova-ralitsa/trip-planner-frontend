@@ -1,9 +1,14 @@
-export const getFriendlyError = (statusCode) => {
+export const getFriendlyError = (statusCode, backendMessage) => {
   const errors = {
     "login-401": {
       title: "Wrong email or password",
       message: "The email or password you entered is incorrect. Please try again.",
       type: "auth"
+    },
+    400: {
+      title: "Invalid Input",
+      message: backendMessage || "Please check your information and try again.",
+      type: "warning"
     },
     401: {
       title: "Session Expired",

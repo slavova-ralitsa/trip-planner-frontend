@@ -10,7 +10,8 @@ export default function RegisterPage() {
   const [birthday, setBirthday] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [registerError, setRegisterError] = useState(null); 
+  const [registerError, setRegisterError] = useState(null);
+  const [registerErrorMessage, setRegisterErrorMessage] = useState(null);
 
   const navigate = useNavigate();
 
@@ -29,6 +30,7 @@ export default function RegisterPage() {
     } catch (error) {
       console.error("Registration error:", error);
       setRegisterError(error.response?.status || 500);
+      setRegisterErrorMessage(error.response?.data?.message || null);
     }
   };
 
@@ -42,13 +44,14 @@ export default function RegisterPage() {
 
           {registerError && (
             <ErrorAlert
-              statusCode={registerError}
-              onClose={() => setRegisterError(null)}
-              onAction={() => {
-                setRegisterError(null);
-                navigate("/login");
-              }}
-            />
+            statusCode={registerError}
+            backendMessage={registerErrorMessage}
+            onClose={() => setRegisterError(null)}
+            onAction={() => {
+              setRegisterError(null);
+              navigate("/login");
+            }}
+          />
           )}
 
           <form onSubmit={handleRegister} style={styles.form}>

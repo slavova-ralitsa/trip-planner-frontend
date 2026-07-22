@@ -1,7 +1,7 @@
 import { getFriendlyError } from "../api/errorTranslations";
 
-function ErrorAlert({ statusCode, onAction, onClose }) {
-  const errorInfo = getFriendlyError(statusCode);
+function ErrorAlert({ statusCode, backendMessage, onAction, onClose }) {
+  const errorInfo = getFriendlyError(statusCode, backendMessage);
 
   const colors = {
     auth: { bg: "#FFF0F2", border: "#D32F2F", text: "#7A1C1C", btn: "#800020" },

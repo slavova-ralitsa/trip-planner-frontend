@@ -170,7 +170,7 @@ function RouteMap({ trip }) {
       if (coords.length > 1) {
         try {
           L.polyline(coords, { color: C.primary, weight: 3, opacity: .8, dashArray: "7 6" }).addTo(layer);
-        } catch(_) {}
+        } catch() {}
       }
 
       stops.forEach(td => {
@@ -224,7 +224,7 @@ function CreateTripModal({ allDestinations, onCreated, onClose }) {
       <div style={{ ...s.modal, maxWidth: 450 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <p style={{ ...s.modalTitle, margin: 0 }}>Create New Trip</p>
-          <button style={s.removeBtn} onClick={onClose} title="Close" style={{ ...s.removeBtn, fontSize: 24 }}>×</button>
+          <button style={s.removeBtn} onClick={onClose} title="Close" >×</button>
         </div>
         
         <TripForm 
