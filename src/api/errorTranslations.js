@@ -46,6 +46,11 @@ export const getFriendlyError = (statusCode, backendMessage) => {
       title: "Passwords don't match",
       message: "Please make sure both password fields are identical.",
       type: "warning"
+    },
+    futureBirthday: {
+      title: "Invalid Birthday",
+      message: "Your birthday cannot be in the future. Please check the date and try again.",
+      type: "warning"
     }
   };
 

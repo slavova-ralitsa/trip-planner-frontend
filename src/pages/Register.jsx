@@ -23,6 +23,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (new Date(birthday) > new Date()) {
+      setRegisterError("futureBirthday");
+      return;
+    }
+
     try {
       const res = await register({ email, name, username, birthday, password, confirmPassword });
       console.log("Registration successful with response:", res);
@@ -87,9 +92,11 @@ export default function RegisterPage() {
               placeholder="Birthday"
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
+              max={new Date().toISOString().split("T")[0]}
               style={styles.input}
               required
             />
+           
 
             <input
               type="password"
