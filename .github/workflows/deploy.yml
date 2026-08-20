@@ -18,13 +18,14 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push image
+    - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: rvslavova/trip-planner-frontend:latest
-
+          build-args: |
+            VITE_API_URL=/api
       - name: Deploy on this host
         run: |
           cd ~/trip-planner-frontend
